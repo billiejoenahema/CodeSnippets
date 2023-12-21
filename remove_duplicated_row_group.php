@@ -1,44 +1,59 @@
 <?php
-
-// 処理前にバックアップファイルファイルをリネームしておく
-// concatenated.csv
-// ↓
-// concatenated_backup.csv
-
 // 元ファイルのパス
-// $originalFilePath = '/directory/' . $argv[1] .  '/concatenated_backup.csv';
+// $dataFilePath = '/directory/' . $argv[1] .  '/data_concatenated_org.csv';
 // 処理後ファイルのパス
-// $newFilePath = '/directory/' . $argv[1] .  '/concatenated.csv';
-$originalFilePath = './concatenated.csv';
+// $newFilePath = '/directory/' . $argv[1] .  '/data.csv';
+$dataFilePath = './concatenated.csv';
 $newFilePath = './concatenated_after.csv';
+$storeIndexFilePath = './store_index.csv';
 
 // 元ファイルの存在チェック
-if (!file_exists($originalFilePath)) {
-    die("Error: ファイルが見つかりません。\n" . $originalFilePath . "\n");
+if (!file_exists($dataFilePath)) {
+    die("Error: ファイルが見つかりません。\n" . $dataFilePath . "\n");
+}
+
+// store_index.csvの存在チェック
+if (!file_exists($storeIndexPath)) {
+    die("Error: ファイルが見つかりません。\n" . $storeIndexPath . "\n");
 }
 
 // 元ファイルを読み込む
-$originalCsv = array_map('str_getcsv', file($originalFilePath));
+$dataCsv = array_map('str_getcsv', file($dataFilePath));
+
+// 元ファイルがCSVかどうかをチェック
+if (!is_array($dataCsv)) {
+    die("Error: ファイルがCSV形式ではありません。" . $dataFilePath . "\n");
+}
+// 元ファイルが空であるかをチェック
+if (empty($dataCsv)) {
+    die("Error: ファイルが空です。" . $dataFilePath . "\n");
+}
 
 // 処理後のファイルがすでに存在する場合はファイルを削除する
 if (file_exists($newFilePath)) {
     unlink($newFilePath);
 }
 
-// 元ファイルがCSVかどうかをチェック
-if (!is_array($originalCsv)) {
-    die("Error: ファイルがCSV形式ではありません。\n");
+// store_index.csvを読み込む
+$storeIndexCsv = array_map('str_getcsv', file($storeIndexFilePath));
+
+// store_index.csvがCSVかどうかをチェック
+if (!is_array($storeIndexCsv)) {
+    die("Error: ファイルがCSV形式ではありません。" . $storeIndexCsv . "\n");
 }
-// 元ファイルが空であるかをチェック
-if (empty($originalCsv)) {
-    die("Error: ファイルが空です。\n");
+
+// store_index.csvが空であるかをチェック
+if (empty($storeIndexCsv)) {
+    die("Error: ファイルが空です。" . $storeIndexCsv . "\n");
 }
 
 // 元ファイルの行数
-$originalRowCount = count($originalCsv);
+$dataRowCount = count($dataCsv);
 
 // 1列目の値が空の行がある場合の処理
+// TODO
 
+// data.csvから
 
 // グループごとの配列を初期化
 $groups = array();
@@ -46,7 +61,7 @@ $groups = array();
 // 1列目に同じ値が連続している行のかたまりを1グループと定義する
 // グループごとに分割
 $groupId = null;
-foreach ($originalCsv as $row) {
+foreach ($dataCsv as $row) {
     $currentGroupId = $row[0];
 
     // 1列目の値の連続性が途切れたら新しいグループとして扱う
@@ -89,10 +104,36 @@ foreach ($groups as $group) {
 
 fclose($fp);
 
-// 元ファイルを読み込む
+// 新しいCSVを元ファイルに上書きする
+// 新しいCSVファイルを読み込む
 $newCsv = array_map('str_getcsv', file($newFilePath));
 
 echo "削除したグループのID: \n";
 echo implode("\n", $removedIds) . "\n";
-echo "処理前の行数: " . count($originalCsv) . "\n";
+echo "処理前の行数: " . count($dataCsv) . "\n";
 echo "処理後の行数: " . count($newCsv) . "\n";
+
+// 重複したグループのIDと削除したグループのIDが一致していなければ処理を終了させる
+if (implode("\n", $removedIds) !== implode("\n", $existingIds)) {
+    die("Error: 重複したグループのIDと削除したグループのIDが一致していません。\n");
+}
+
+echo "store_index.csvから重複している店舗を削除します。";
+
+//
+// store_index.csvを読み込む
+$storeIndexCsv = array_map('str_getcsv', file($storeIndexFilePath));
+
+// store_index.csvから重複している店舗を削除
+$newStoreIndexCsv = array_filter($storeIndexCsv, function ($row) use ($removedIds) {
+    return !in_array($row[0], $removedIds);
+});
+
+// 新しいstore_index.csvに書き込む
+$fp = fopen($storeIndexFilePath, 'w');
+foreach ($newStoreIndexCsv as $row) {
+    fputcsv($fp, $row);
+}
+fclose($fp);
+echo "完了しました。\n";
+
