@@ -1,37 +1,38 @@
 <?php
-// 元ファイルのパス
-// $dataFilePath = '/directory/' . $argv[1] .  '/data_concatenated_org.csv';
-// 処理後ファイルのパス
-// $newFilePath = '/directory/' . $argv[1] .  '/data.csv';
-$dataFilePath = './concatenated.csv';
-$newFilePath = './concatenated_after.csv';
+$dataFilePath = './data.csv';
 $storeIndexFilePath = './store_index.csv';
 
-// 元ファイルの存在チェック
+// ファイルの存在チェック
 if (!file_exists($dataFilePath)) {
     die("Error: ファイルが見つかりません。\n" . $dataFilePath . "\n");
 }
-
-// store_index.csvの存在チェック
 if (!file_exists($storeIndexPath)) {
     die("Error: ファイルが見つかりません。\n" . $storeIndexPath . "\n");
 }
 
-// 元ファイルを読み込む
+// ファイルを読み込む
 $dataCsv = array_map('str_getcsv', file($dataFilePath));
+$storeIndexCsv = array_map('str_getcsv', file($storeIndexFilePath));
 
-// 元ファイルがCSVかどうかをチェック
+// CSVかどうかをチェック
 if (!is_array($dataCsv)) {
     die("Error: ファイルがCSV形式ではありません。" . $dataFilePath . "\n");
 }
-// 元ファイルが空であるかをチェック
+if (!is_array($storeIndexCsv)) {
+    die("Error: ファイルがCSV形式ではありません。" . $storeIndexFilePath . "\n");
+}
+
+// 空であるかをチェック
 if (empty($dataCsv)) {
     die("Error: ファイルが空です。" . $dataFilePath . "\n");
 }
+if (empty($storeIndexCsv)) {
+    die("Error: ファイルが空です。" . $storeIndexFilePath . "\n");
+}
 
 // 処理後のファイルがすでに存在する場合はファイルを削除する
-if (file_exists($newFilePath)) {
-    unlink($newFilePath);
+if (file_exists($dataFilePath)) {
+    unlink($dataFilePath);
 }
 
 // store_index.csvを読み込む
@@ -81,7 +82,7 @@ $existingIds = [];
 $removedIds = [];
 
 // 新しいCSVファイルに書き込む
-$fp = fopen($newFilePath, 'a');
+$fp = fopen($dataFilePath, 'w');
 
 foreach ($groups as $group) {
     $groupId = $group[0][0];
@@ -106,7 +107,7 @@ fclose($fp);
 
 // 新しいCSVを元ファイルに上書きする
 // 新しいCSVファイルを読み込む
-$newCsv = array_map('str_getcsv', file($newFilePath));
+$newCsv = array_map('str_getcsv', file($dataFilePath));
 
 echo "削除したグループのID: \n";
 echo implode("\n", $removedIds) . "\n";
